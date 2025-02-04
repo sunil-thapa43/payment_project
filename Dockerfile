@@ -15,5 +15,8 @@ RUN pip install -r requirements.txt
 COPY . .
 
 EXPOSE 8000
+EXPOSE 50051
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+# Set the entrypoint
+ENTRYPOINT ["/code/runners.sh"]

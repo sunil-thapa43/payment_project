@@ -10,16 +10,6 @@ from payment.strategies.ime_pay import IMEPayPayment
 from payment.strategies.khalti import KhaltiPayment
 
 
-# class PaymentPartnersView(NavyaAuthLessView):
-#     queryset = PaymentPartners.objects.filter(active=True)
-#     serializer_class = PaymentPartnersSerializer
-
-
-# def get(self, request):
-#     response = self.queryset
-#     return Response(data=response, status=status.HTTP_200_OK)
-
-
 class PaymentRequestView(NavyaAuthLessView):
     serializer_class = PaymentRequestSerializer
 
@@ -31,6 +21,7 @@ class PaymentRequestView(NavyaAuthLessView):
         payment_partner = serializer.validated_data["payment_partner"]
         amount = serializer.validated_data["amount"]
         purpose = serializer.validated_data["purpose"]
+        user_id = serializer.validated_data["user_id"]
         # check the user chosen strategy and set strategy accordingly
         if payment_partner.name == "esewa":
             strategy = EsewaPayment()

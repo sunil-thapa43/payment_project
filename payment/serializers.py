@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import PaymentRequest, Payment
+from django_socio_grpc import proto_serializers
 
 
 # class PaymentPartnersSerializer(serializers.ModelSerializer):
@@ -20,8 +21,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
             "amount_in_paisa",
             "transaction_id",
         ]
-        extra_kwargs = {
-            "user_id": {"read_only": True},  # user_id is read-only (set from request)
+        extra_kwargs = { # user_id is read-only (set from request)
             "remarks": {"required": False},  # remarks is optional
             "amount_in_paisa": {"required": False},  # amount_in_paisa is optional
             "transaction_id": {"required": False},  # transaction_id is optional
@@ -68,3 +68,46 @@ class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         exclude = ("created_at", "updated_at")
+
+
+""" Writing Proto Serializers from here on:"""
+
+class PaymentRequestProtoSerializer(proto_serializers.ModelProtoSerializer):
+    class Meta:
+        model = PaymentRequest
+        fields = [
+            "id",
+            "payment_partner",
+            "user_id",
+            "purpose",
+            "remarks",
+            "amount",
+            "amount_in_paisa",
+            "transaction_id",
+        ]
+
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "remarks": {"required": False},
+            "amount_in_paisa": {"required": False},
+            "transaction_id": {"required": False},
+            "purpose": {"required": False},
+        }
+
+
+class PaymentProtoSerializer(proto_serializers.ModelProtoSerializer):
+    class Meta:
+        model = Payment
+        fields = [
+            "id",
+            "request",
+            "user_id",
+            "amount",
+            "transaction_id",
+            "amount_in_paisa",
+        ]
+
+        extra_kwargs = {
+            "id": {"read_only": True},
+            "amount_in_paisa": {"required": False},
+        }

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -41,7 +42,7 @@ PRE_INSTALLED_APPS = [
 ]
 USER_ADDED_APPS = ["payment"]
 
-THIRD_PARTY_APPS = ["rest_framework", "pydantic_settings"]
+THIRD_PARTY_APPS = ["rest_framework", "pydantic_settings", "django_socio_grpc"]
 
 INSTALLED_APPS = PRE_INSTALLED_APPS + USER_ADDED_APPS + THIRD_PARTY_APPS
 
@@ -108,6 +109,11 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# GRPC settings here
+GRPC_FRAMEWORK = {
+    "ROOT_HANDLERS_HOOK" : "payment.handlers.grpc_handlers",
+}
 
 
 # Internationalization

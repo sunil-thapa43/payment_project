@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package core.payment;
+
+import "google/protobuf/empty.proto";
+
+service PaymentController {
+    rpc Create(PaymentRequest) returns (PaymentResponse) {}
+    rpc Destroy(PaymentDestroyRequest) returns (google.protobuf.Empty) {}
+    rpc List(PaymentListRequest) returns (PaymentListResponse) {}
+    rpc PartialUpdate(PaymentPartialUpdateRequest) returns (PaymentResponse) {}
+    rpc Retrieve(PaymentRetrieveRequest) returns (PaymentResponse) {}
+    rpc Update(PaymentRequest) returns (PaymentResponse) {}
+}
+
+service PaymentRequestController {
+    rpc Create(PaymentRequest) returns (PaymentRequestResponse) {}
+    rpc Destroy(PaymentRequestDestroyRequest) returns (google.protobuf.Empty) {}
+    rpc List(PaymentRequestListRequest) returns (PaymentRequestListResponse) {}
+    rpc PartialUpdate(PaymentRequestPartialUpdateRequest) returns (PaymentRequestResponse) {}
+    rpc Retrieve(PaymentRequestRetrieveRequest) returns (PaymentRequestResponse) {}
+    rpc Update(PaymentRequest) returns (PaymentRequestResponse) {}
+}
+
+message PaymentDestroyRequest {
+    int32 id = 1;
+}
+
+message PaymentListRequest {
+}
+
+message PaymentListResponse {
+    repeated PaymentResponse results = 1;
+}
+
+message PaymentPartialUpdateRequest {
+    optional int32 id = 1;
+    int64 request = 2;
+    int32 user_id = 3;
+    double amount = 4;
+    string transaction_id = 5;
+    optional double amount_in_paisa = 6;
+    repeated string _partial_update_fields = 7;
+}
+
+message PaymentRequest {
+    optional int32 id = 1;
+    string payment_partner = 2;
+    optional int32 user_id = 3;
+    optional string purpose = 4;
+    optional string remarks = 5;
+    double amount = 6;
+    optional double amount_in_paisa = 7;
+    optional string transaction_id = 8;
+}
+
+message PaymentRequestDestroyRequest {
+    int32 id = 1;
+}
+
+message PaymentRequestListRequest {
+}
+
+message PaymentRequestListResponse {
+    repeated PaymentRequestResponse results = 1;
+}
+
+message PaymentRequestPartialUpdateRequest {
+    optional int32 id = 1;
+    string payment_partner = 2;
+    optional int32 user_id = 3;
+    optional string purpose = 4;
+    optional string remarks = 5;
+    double amount = 6;
+    optional double amount_in_paisa = 7;
+    optional string transaction_id = 8;
+    repeated string _partial_update_fields = 9;
+}
+
+message PaymentRequestResponse {
+    optional int32 id = 1;
+    string payment_partner = 2;
+    optional int32 user_id = 3;
+    optional string purpose = 4;
+    optional string remarks = 5;
+    double amount = 6;
+    optional double amount_in_paisa = 7;
+    optional string transaction_id = 8;
+}
+
+message PaymentRequestRetrieveRequest {
+    int32 id = 1;
+}
+
+message PaymentResponse {
+    optional int32 id = 1;
+    int64 request = 2;
+    int32 user_id = 3;
+    double amount = 4;
+    string transaction_id = 5;
+    optional double amount_in_paisa = 6;
+}
+
+message PaymentRetrieveRequest {
+    int32 id = 1;
+}
+

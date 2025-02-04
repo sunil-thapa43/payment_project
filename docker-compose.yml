@@ -19,11 +19,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - "grpc_networks"
   web:
     build: .
     ports:
       - "8000:8000"
-    command: bash -c "pip install -r requirements.txt && python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+      - "50051:50051"
+#    command: bash -c "pip install -r requirements.txt &&  python manage.py makemigrations && python manage.py migrate && python manage.py grpcrunaioserver --dev && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -31,7 +34,12 @@ services:
       - ./.env
     volumes:
       - .:/code
+    networks:
+      - "grpc_networks"
 
 
 volumes:
   payment_data:
+
+networks:
+  grpc_networks:
