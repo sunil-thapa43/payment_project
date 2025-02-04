@@ -1,0 +1,6 @@
+repos:
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.274  # Use the latest release (check for updates)
+    hooks:
+      - id: ruff
+        args: ["--select", "I", "--fix"]  # Automatically fix import sorting
