@@ -24,7 +24,7 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         extra_kwargs = { # user_id is read-only (set from request)
             "remarks": {"required": False},  # remarks is optional
             "amount_in_paisa": {"required": False},  # amount_in_paisa is optional
-            "transaction_id": {"required": False},  # transaction_id is optional
+            "transaction_id": {"required": True},  # transaction_id is optional
         }
 
     def validate(self, data):
@@ -88,6 +88,7 @@ class PaymentRequestProtoSerializer(proto_serializers.ModelProtoSerializer):
 
         extra_kwargs = {
             "id": {"read_only": True},
+            "payment_partner": {"required": False},
             "remarks": {"required": False},
             "amount_in_paisa": {"required": False},
             "transaction_id": {"required": False},

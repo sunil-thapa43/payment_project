@@ -5,6 +5,9 @@ import uuid, hmac, hashlib
 def generate_transaction_id() -> str:
     return str(uuid.uuid4().hex[:20])
 
+def base_64_encoder(message:str)->str:
+    return base64.b64encode(message.encode()).decode()
+
 
 def encode_cips_message(cips_message: str) -> str: ...
 

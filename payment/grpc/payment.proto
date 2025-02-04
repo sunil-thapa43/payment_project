@@ -45,7 +45,7 @@ message PaymentPartialUpdateRequest {
 
 message PaymentRequest {
     optional int32 id = 1;
-    string payment_partner = 2;
+    optional string payment_partner = 2;
     optional int32 user_id = 3;
     optional string purpose = 4;
     optional string remarks = 5;

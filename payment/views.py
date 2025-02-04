@@ -75,7 +75,7 @@ class KhaltiPaymentVerificationView(NavyaAuthLessView):
 class IMEPayPaymentVerificationView(NavyaAuthLessView):
     def get(self, request):
         # ref_id from the response is transaction_id in our payment request table
-        pass
+        ...
 
 
 class ConnectIPSPaymentVerificationView(NavyaAuthLessView):
