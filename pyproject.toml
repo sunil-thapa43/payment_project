@@ -27,6 +27,8 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
+    # exclude migration files, we should be careful with migs
+    "migrations"
 ]
 
 # Same as Black.

@@ -59,7 +59,9 @@ class ConnectIPSPayment(PaymentStrategy):
         #
         # print(response.status_code)
         # print(response.json())
-        response = requests.post(url=verify_url, data=payload, auth=HTTPBasicAuth(merchant_id, password))
+        response = requests.post(
+            url=verify_url, data=payload, auth=HTTPBasicAuth(merchant_id, password)
+        )
         if response.status_code != 200:
             # maybe retry once or twice
             return False
@@ -68,5 +70,3 @@ class ConnectIPSPayment(PaymentStrategy):
             if status["status"] == "SUCCESS":
                 return True
             return False
-
-

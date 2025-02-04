@@ -13,7 +13,6 @@ class KhaltiPayment(PaymentStrategy):
         self.config = PaymentConfig()
         self.configs = self.config.get_credentials(self.service)
 
-
     def initiate_payment(self, amount, **kwargs):
         """
         For Khalti payment, once the user chooses the Khalti payment option from all available options,
@@ -41,22 +40,24 @@ class KhaltiPayment(PaymentStrategy):
         wesite_url = kwargs.get("wesite_url")
         transaction_id = generate_transaction_id()
 
-        payload = json.dumps({
-            "return_url": success_url,
-            "website_url": wesite_url,
-            # amount should be in paisa
-            "amount": amount,
-            "purchase_order_id": transaction_id,
-            "purchase_order_name": kwargs.get("purchase_order_name"),
-            "customer_info": {
-                "name": kwargs.get("customer_name"),
-                "email": kwargs.get("customer_email"),
-                "phone": kwargs.get("customer_phone"),
+        payload = json.dumps(
+            {
+                "return_url": success_url,
+                "website_url": wesite_url,
+                # amount should be in paisa
+                "amount": amount,
+                "purchase_order_id": transaction_id,
+                "purchase_order_name": kwargs.get("purchase_order_name"),
+                "customer_info": {
+                    "name": kwargs.get("customer_name"),
+                    "email": kwargs.get("customer_email"),
+                    "phone": kwargs.get("customer_phone"),
+                },
             }
-        })
+        )
         headers = {
-            'Authorization': f'key {secret_key}',
-            'Content-Type': 'application/json',
+            "Authorization": f"key {secret_key}",
+            "Content-Type": "application/json",
         }
 
         response = requests.request("POST", initiate_url, headers=headers, data=payload)
@@ -66,24 +67,23 @@ class KhaltiPayment(PaymentStrategy):
         else:
             return None
 
-
-    def verify_payment(self, amount, **kwargs)->bool:
+    def verify_payment(self, amount, **kwargs) -> bool:
         secret_key = self.configs["secret_key"]
-        body = json.dumps({
-            "pidx": kwargs.get("pidx")
-        })
+        body = json.dumps({"pidx": kwargs.get("pidx")})
         verify_url = self.configs["verify_url"]
 
         headers = {
-            'Authorization': f'key {secret_key}',
-            'Content-Type': 'application/json',
+            "Authorization": f"key {secret_key}",
+            "Content-Type": "application/json",
         }
         response = requests.request("POST", verify_url, headers=headers, data=body)
         body = response.json()
         if not (response.status_code == 200 or body["status"].lower() == "completed"):
             return False
         # cross check with payment request
-        payment_request = PaymentRequest.objects.filter(transaction_id=body["tranasaction_id"], amount=body["amount"])
+        payment_request = PaymentRequest.objects.filter(
+            transaction_id=body["tranasaction_id"], amount=body["amount"]
+        )
         if not payment_request:
             # add some logs here, because it is already success on Khalti's end, but might be some infiltration as well
             # add logs

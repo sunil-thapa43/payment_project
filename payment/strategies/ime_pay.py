@@ -30,9 +30,11 @@ class IMEPayPayment(PaymentStrategy):
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Basic {auth_encoded}",
-            "Module": module_encoded
+            "Module": module_encoded,
         }
-        response = requests.request(method="POST", url=initiate_url, data=payload, headers=headers)
+        response = requests.request(
+            method="POST", url=initiate_url, data=payload, headers=headers
+        )
         pass
 
     def verify_payment(self, **kwargs):

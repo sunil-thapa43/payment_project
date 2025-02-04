@@ -8,20 +8,23 @@ from .models import PaymentRequest, Payment
 #         fields = '__all__'
 
 
-
 class PaymentRequestSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = PaymentRequest
         fields = [
-            'payment_partner', 'user_id', 'purpose', 'remarks', 'amount',
-            'amount_in_paisa', 'transaction_id'
+            "payment_partner",
+            "user_id",
+            "purpose",
+            "remarks",
+            "amount",
+            "amount_in_paisa",
+            "transaction_id",
         ]
         extra_kwargs = {
-            'user_id': {'read_only': True},  # user_id is read-only (set from request)
-            'remarks': {'required': False},  # remarks is optional
-            'amount_in_paisa': {'required': False},  # amount_in_paisa is optional
-            'transaction_id': {'required': False},  # transaction_id is optional
+            "user_id": {"read_only": True},  # user_id is read-only (set from request)
+            "remarks": {"required": False},  # remarks is optional
+            "amount_in_paisa": {"required": False},  # amount_in_paisa is optional
+            "transaction_id": {"required": False},  # transaction_id is optional
         }
 
     def validate(self, data):
@@ -29,15 +32,15 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         Custom validation logic.
         """
         # Ensure merchant is provided
-        if 'payment_partner' not in data:
+        if "payment_partner" not in data:
             raise serializers.ValidationError("Payment Partner is required.")
 
         # Ensure purpose is one of the allowed choices
-        if data['purpose'] not in self.PURPOSE_CHOICES:
+        if data["purpose"] not in self.PURPOSE_CHOICES:
             raise serializers.ValidationError("Invalid purpose.")
 
         # Ensure amount is provided and positive
-        if 'amount' not in data or data['amount'] <= 0:
+        if "amount" not in data or data["amount"] <= 0:
             raise serializers.ValidationError("Amount must be a positive value.")
 
         return data
@@ -49,16 +52,17 @@ class PaymentRequestSerializer(serializers.ModelSerializer):
         2. Convert amount to amount_in_paisa if not provided.
         """
         # Get user_id from the request context
-        request = self.context.get('request')
-        if request and hasattr(request, 'user'):
-            validated_data['user_id'] = request.user.id
+        request = self.context.get("request")
+        if request and hasattr(request, "user"):
+            validated_data["user_id"] = request.user.id
 
         # Convert amount to amount_in_paisa if not provided
-        if 'amount_in_paisa' not in validated_data:
-            validated_data['amount_in_paisa'] = validated_data['amount'] * 100
+        if "amount_in_paisa" not in validated_data:
+            validated_data["amount_in_paisa"] = validated_data["amount"] * 100
 
         # Create and return the PaymentRequest instance
         return PaymentRequest.objects.create(**validated_data)
+
 
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:

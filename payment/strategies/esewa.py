@@ -35,8 +35,7 @@ class EsewaPayment(PaymentStrategy):
         }
         return body
 
-
-    def verify_payment(self, amount, **kwargs)->bool:
+    def verify_payment(self, amount, **kwargs) -> bool:
         # decode the token
         token = kwargs.get("token")
         decoded_token = base64.b64decode(token).decode()
@@ -48,7 +47,9 @@ class EsewaPayment(PaymentStrategy):
         transaction_id = body["transaction_id"]
         amount = float(body["amount"])
         # cross check with payment request
-        payment_request = PaymentRequest.objects.filter(payment_partner__name="esewa", transaction_id=transaction_id, amount=amount)
+        payment_request = PaymentRequest.objects.filter(
+            payment_partner__name="esewa", transaction_id=transaction_id, amount=amount
+        )
         if not payment_request:
             return False
         # double check for transaction:
@@ -58,4 +59,3 @@ class EsewaPayment(PaymentStrategy):
         else:
             # maybe we should return the payment request if the payment request is success
             return True
-

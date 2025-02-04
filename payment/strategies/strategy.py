@@ -9,13 +9,3 @@ class PaymentStrategy(ABC):
     @abstractmethod
     def verify_payment(self, amount, **kwargs):
         pass
-
-
-
-
-
-
-
-
-
-

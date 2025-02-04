@@ -10,27 +10,27 @@ from payment.strategies.ime_pay import IMEPayPayment
 from payment.strategies.khalti import KhaltiPayment
 
 
-
 # class PaymentPartnersView(NavyaAuthLessView):
 #     queryset = PaymentPartners.objects.filter(active=True)
 #     serializer_class = PaymentPartnersSerializer
 
 
-    # def get(self, request):
-    #     response = self.queryset
-    #     return Response(data=response, status=status.HTTP_200_OK)
+# def get(self, request):
+#     response = self.queryset
+#     return Response(data=response, status=status.HTTP_200_OK)
 
 
 class PaymentRequestView(NavyaAuthLessView):
     serializer_class = PaymentRequestSerializer
+
     # post request
     def post(self, request, *args, **kwargs):
         serializer = PaymentRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        payment_partner = serializer.validated_data['payment_partner']
-        amount = serializer.validated_data['amount']
-        purpose = serializer.validated_data['purpose']
+        payment_partner = serializer.validated_data["payment_partner"]
+        amount = serializer.validated_data["amount"]
+        purpose = serializer.validated_data["purpose"]
         # check the user chosen strategy and set strategy accordingly
         if payment_partner.name == "esewa":
             strategy = EsewaPayment()
@@ -51,10 +51,10 @@ class PaymentRequestView(NavyaAuthLessView):
         # now save the payment request object here and return response to user, shall be atomic transaction
         payment_request_obj, created = PaymentRequest.object.create(
             amount=amount,
-            amount_in_paisa=amount*100,
+            amount_in_paisa=amount * 100,
             purpose=purpose,
-            remarks=body['remarks'],
-            transaction_id=body['transaction_id'],
+            remarks=body["remarks"],
+            transaction_id=body["transaction_id"],
             user_id=user_id,
             payment_partner=payment_partner,
         )
@@ -80,6 +80,7 @@ class KhaltiPaymentVerificationView(NavyaAuthLessView):
         # call the verify_payment method from paymentStrategy, verify the payment and do the grpc
         pass
 
+
 class IMEPayPaymentVerificationView(NavyaAuthLessView):
     def get(self, request):
         # ref_id from the response is transaction_id in our payment request table
@@ -96,6 +97,7 @@ class ConnectIPSPaymentVerificationView(NavyaAuthLessView):
 # added to allowed hosts (IMO)
 # PaymentRequestView -> get, auth= isStaffUser, isAdmin, isSuperUser, table = PaymentRequest
 # PaymentView -> get, auth= same as above, table = Payment
+
 
 def handle_grpc_write():
     # do something here like writing the payment status
