@@ -42,7 +42,7 @@ PRE_INSTALLED_APPS = [
 ]
 USER_ADDED_APPS = ["payment"]
 
-THIRD_PARTY_APPS = ["rest_framework", "pydantic_settings", "django_socio_grpc"]
+THIRD_PARTY_APPS = ["rest_framework", "pydantic_settings", "django_socio_grpc", "drf_yasg"]
 
 INSTALLED_APPS = PRE_INSTALLED_APPS + USER_ADDED_APPS + THIRD_PARTY_APPS
 
@@ -113,6 +113,19 @@ AUTH_PASSWORD_VALIDATORS = [
 # GRPC settings here
 GRPC_FRAMEWORK = {
     "ROOT_HANDLERS_HOOK" : "payment.handlers.grpc_handlers",
+}
+
+# swagger settings definitions
+SWAGGER_SETTINGS = {
+    "USE_SESSION_AUTH": False,
+    # our API endpoints will have no auth, but if some endpoints need auth then this will be helpful
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
 }
 
 

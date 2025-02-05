@@ -1,4 +1,5 @@
 import base64
+import binascii
 import uuid, hmac, hashlib
 
 
@@ -31,3 +32,11 @@ def get_encoded_token_cips(token: str, cert_path) -> str:
     message = token.encode()
     signed_message = sign_connect_ips_message(message, cert_path)
     return signed_message
+
+
+def decode_imepay_message(message:str):
+    try:
+        decoded_str = base64.b64decode(message).decode()
+        return decoded_str
+    except binascii.Error:
+        return None

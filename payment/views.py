@@ -15,26 +15,38 @@ class PaymentRequestView(NavyaAuthLessView):
 
     # post request
     def post(self, request, *args, **kwargs):
-        serializer = PaymentRequestSerializer(data=request.data)
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         payment_partner = serializer.validated_data["payment_partner"]
         amount = serializer.validated_data["amount"]
-        purpose = serializer.validated_data["purpose"]
         user_id = serializer.validated_data["user_id"]
+        transaction_id = serializer.validated_data["transaction_id"]
+        # check the record in our db first
+        transaction_request = PaymentRequest.objects.filter(
+            amount=amount,
+            user_id=user_id,
+            transaction_id=transaction_id,
+        )
+        if not transaction_request:
+            return Response(
+                status=status.HTTP_404_NOT_FOUND,
+                data=None
+            )
+
         # check the user chosen strategy and set strategy accordingly
-        if payment_partner.name == "esewa":
+        if payment_partner== "esewa":
             strategy = EsewaPayment()
-            body = strategy.initiate_payment(amount=amount, purpose=purpose)
-        elif payment_partner.name == "khalti":
+            body = strategy.initiate_payment(amount=amount)
+        elif payment_partner== "khalti":
             strategy = KhaltiPayment()
-            body = strategy.initiate_payment(amount=amount, purpose=purpose)
-        elif payment_partner.name == "connectips":
+            body = strategy.initiate_payment(amount=amount)
+        elif payment_partner== "connectips":
             strategy = ConnectIPSPayment()
-            body = strategy.initiate_payment(amount=amount, purpose=purpose)
-        elif payment_partner.name == "imepay":
+            body = strategy.initiate_payment(amount=amount)
+        elif payment_partner== "imepay":
             strategy = IMEPayPayment()
-            body = strategy.initiate_payment(amount=amount, purpose=purpose)
+            body = strategy.initiate_payment(amount=amount)
 
         else:
             raise NotImplementedError
@@ -43,13 +55,14 @@ class PaymentRequestView(NavyaAuthLessView):
         payment_request_obj, created = PaymentRequest.object.create(
             amount=amount,
             amount_in_paisa=amount * 100,
-            purpose=purpose,
+            # purpose=purpose,
             remarks=body["remarks"],
             transaction_id=body["transaction_id"],
             user_id=user_id,
             payment_partner=payment_partner,
         )
-        return Response(data=body, status=status.HTTP_200_OK)
+        response_body = self.serializer_class(payment_request_obj).data
+        return Response(data=response_body, status=status.HTTP_200_OK)
 
 
 class EsewaPaymentVerificationView(NavyaAuthLessView):
@@ -74,8 +87,26 @@ class KhaltiPaymentVerificationView(NavyaAuthLessView):
 
 class IMEPayPaymentVerificationView(NavyaAuthLessView):
     def get(self, request):
-        # ref_id from the response is transaction_id in our payment request table
-        ...
+        """
+        If merchant specified the Method parameter as GET then transaction response is routed to
+        the merchant’s portal (RespUrl) in a Base64 query string by IME pay. The response url
+        will be like:
+        http://abc.com/result.aspx?data=M3xPcGVyYXRpb24gQ2FuY2VsbGVkIEJ5IFVzZXJ8MDAwfDAwM
+        HxDaGl5YVBlckN1cF8xMC4xNXwxMC4xNXwyMDIwMDQwNDE5MzEzOTgzOTI%3d
+        """
+
+        data = request.GET.get("data")
+        # here I want this strategy to handle the write and grpc calls
+        strategy = IMEPayPayment()
+        verified = strategy.verify_payment(data=data)
+        # maybe return redirect
+        if verified:
+            # maybe redirect
+            return Response(success=True, data={}, status=status.HTTP_200_OK)
+        else:
+            # maybe redirect to payment failed url or sth like that
+            return ...
+
 
 
 class ConnectIPSPaymentVerificationView(NavyaAuthLessView):
