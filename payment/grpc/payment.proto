@@ -45,13 +45,14 @@ message PaymentPartialUpdateRequest {
 
 message PaymentRequest {
     optional int32 id = 1;
-    optional string payment_partner = 2;
     optional int32 user_id = 3;
-    optional string purpose = 4;
-    optional string remarks = 5;
-    double amount = 6;
-    optional double amount_in_paisa = 7;
-    optional string transaction_id = 8;
+    double amount = 4;
+    optional double amount_in_paisa = 5;
+    optional string transaction_id = 6;
+    optional string payment_partner = 7;
+    optional string purpose = 8;
+    optional string remarks = 9;
+    optional string status = 10;
 }
 
 message PaymentRequestDestroyRequest {
@@ -67,7 +68,7 @@ message PaymentRequestListResponse {
 
 message PaymentRequestPartialUpdateRequest {
     optional int32 id = 1;
-    string payment_partner = 2;
+    optional string payment_partner = 2;
     optional int32 user_id = 3;
     optional string purpose = 4;
     optional string remarks = 5;
@@ -75,17 +76,19 @@ message PaymentRequestPartialUpdateRequest {
     optional double amount_in_paisa = 7;
     optional string transaction_id = 8;
     repeated string _partial_update_fields = 9;
+    optional string status = 10;
 }
 
 message PaymentRequestResponse {
     optional int32 id = 1;
-    string payment_partner = 2;
+    optional string payment_partner = 2;
     optional int32 user_id = 3;
     optional string purpose = 4;
     optional string remarks = 5;
     double amount = 6;
     optional double amount_in_paisa = 7;
     optional string transaction_id = 8;
+    optional string status = 9;
 }
 
 message PaymentRequestRetrieveRequest {

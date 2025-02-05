@@ -16,5 +16,5 @@ echo "================================ Server is starting now  =================
 python3 manage.py makemigrations &&
 python3 manage.py migrate &&
 #runners
-python3 manage.py grpcrunserver --dev 0.0.0.0:50051&
+python3 manage.py grpcrunserver --dev 0.0.0.0:50051 &
 python3 manage.py runserver 0.0.0.0:8000
