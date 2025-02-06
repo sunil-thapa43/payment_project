@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 
+from payment.models import PaymentRequest
+
 
 class PaymentStrategy(ABC):
     @abstractmethod
-    def initiate_payment(self, amount, **kwargs):
+    def initiate_payment(self, obj:PaymentRequest, **kwargs):
         """
         Initiate Payment is not basically initiate payment in our case, because the payment is
         already initiated by the Admin service.
@@ -15,7 +17,7 @@ class PaymentStrategy(ABC):
         ...
 
     @abstractmethod
-    def verify_payment(self, amount, **kwargs):
+    def verify_payment(self, message, **kwargs):
         """
         Verify payment is just a class method that helps to verify the payments made from various
         merchants. For each payment partner, separate implementation of verify payment is adopted.

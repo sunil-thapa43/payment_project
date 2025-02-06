@@ -1,7 +1,7 @@
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
-from enums import PaymentVendor, PaymentStatus
+from utils.enums import PaymentVendor, PaymentStatus
 
 
 class NavyaBaseModel(models.Model):
@@ -56,6 +56,7 @@ class PaymentRequest(NavyaBaseModel):
     )
     transaction_id = models.CharField(max_length=100, blank=False, null=False)
     status = models.TextField(choices=PaymentStatus.choices(), blank=False, null=False)
+    signature = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"Payment Request for User: {self.user_id} of Amount: {self.amount}"

@@ -20,6 +20,9 @@ class PaymentConfig(BaseSettings):
         """
         prefix = f"{service.upper()}_"
         credentials = {}
+        # add backend url here
+        credentials["backend_url"] = os.getenv("BACKEND_URL")
+        credentials["max_retry"] = os.getenv("MAX_RETRY")
         for key, value in os.environ.items():
             if key.startswith(prefix):
                 # Remove prefix and convert the remaining part to lowercase

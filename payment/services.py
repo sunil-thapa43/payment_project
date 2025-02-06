@@ -1,10 +1,10 @@
 from django_socio_grpc import generics
-from grpc import RpcError, StatusCode
-from enums import PaymentStatus
+from grpc import StatusCode
+from utils.enums import PaymentStatus
 from payment.grpc import payment_pb2
 from payment.models import PaymentRequest, Payment
 from payment.serializers import PaymentRequestProtoSerializer, PaymentProtoSerializer
-from utils import generate_transaction_id
+from utils.utils import generate_transaction_id
 
 
 class PaymentRequestService(generics.AsyncModelService):

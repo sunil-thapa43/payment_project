@@ -5,7 +5,7 @@ from payment.views import (
     KhaltiPaymentVerificationView,
     EsewaPaymentVerificationView,
     ConnectIPSPaymentVerificationView,
-    IMEPayPaymentVerificationView,
+    IMEPayPaymentVerificationView, PaymentFailureView,
 )
 
 urlpatterns = [
@@ -31,5 +31,11 @@ urlpatterns = [
         IMEPayPaymentVerificationView.as_view(),
         name="imepay_payment_verification",
     ),
+    # failure page
+    path(
+        "payment-failure/",
+        PaymentFailureView.as_view(),
+        name="payment_failure",
+    )
     # if some other payment partners are added in future, we may need to add the success url for those partners
 ]

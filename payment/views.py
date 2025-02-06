@@ -1,7 +1,8 @@
+from django.views.generic.base import RedirectView
 from rest_framework import status
 from rest_framework.response import Response
 
-from core.views import NavyaAuthView, NavyaAuthLessView
+from core.views import NavyaAuthLessView
 from payment.models import PaymentRequest
 from payment.serializers import PaymentRequestSerializer
 from payment.strategies.connect_ips import ConnectIPSPayment
@@ -33,49 +34,39 @@ class PaymentRequestView(NavyaAuthLessView):
                 status=status.HTTP_404_NOT_FOUND,
                 data=None
             )
-
+        transaction_request_object = transaction_request.first()
         # check the user chosen strategy and set strategy accordingly
-        if payment_partner== "esewa":
+        if payment_partner== "eSewa":
             strategy = EsewaPayment()
-            body = strategy.initiate_payment(amount=amount)
-        elif payment_partner== "khalti":
+            body= strategy.initiate_payment(obj=transaction_request_object)
+        elif payment_partner== "Khalti":
             strategy = KhaltiPayment()
-            body = strategy.initiate_payment(amount=amount)
-        elif payment_partner== "connectips":
+            body= strategy.initiate_payment(obj=transaction_request_object)
+        elif payment_partner== "Connect IPS":
             strategy = ConnectIPSPayment()
-            body = strategy.initiate_payment(amount=amount)
-        elif payment_partner== "imepay":
+            body= strategy.initiate_payment(obj=transaction_request_object)
+        elif payment_partner== "IME Pay":
             strategy = IMEPayPayment()
-            body = strategy.initiate_payment(amount=amount)
+            body = strategy.initiate_payment(obj=transaction_request_object)
 
         else:
             raise NotImplementedError
 
-        # now save the payment request object here and return response to user, shall be atomic transaction
-        payment_request_obj, created = PaymentRequest.object.create(
-            amount=amount,
-            amount_in_paisa=amount * 100,
-            # purpose=purpose,
-            remarks=body["remarks"],
-            transaction_id=body["transaction_id"],
-            user_id=user_id,
-            payment_partner=payment_partner,
-        )
-        response_body = self.serializer_class(payment_request_obj).data
-        return Response(data=response_body, status=status.HTTP_200_OK)
+        if not body:
+            return Response(data=None, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data=body, status=status.HTTP_200_OK)
 
 
 class EsewaPaymentVerificationView(NavyaAuthLessView):
     def get(self, request):
-        request_content = self.request.get.GET()
-        # decode the content
-        # decoding is done on EsewaPayment Strategy
+        data = request.query_params.get("data")
+        # this data should be decoded first. Decoding is done on EsewaPayment Strategy
         strategy = EsewaPayment()
-        payment_verified = strategy.verify_payment(request_content)
-        # check the amount, transaction id matches here with the payment request
-        # if yes then do grpc
-        # else nothing
-        pass
+        payment_verified = strategy.verify_payment(message=data)
+        if payment_verified:
+            # redirect to success url
+            return Response(data={}, status=status.HTTP_200_OK)
+        return Response(data={}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class KhaltiPaymentVerificationView(NavyaAuthLessView):
@@ -95,14 +86,15 @@ class IMEPayPaymentVerificationView(NavyaAuthLessView):
         HxDaGl5YVBlckN1cF8xMC4xNXwxMC4xNXwyMDIwMDQwNDE5MzEzOTgzOTI%3d
         """
 
-        data = request.GET.get("data")
+        data = request.query_params.get("data")
+        print("the query_param is: ", data)
         # here I want this strategy to handle the write and grpc calls
         strategy = IMEPayPayment()
         verified = strategy.verify_payment(data=data)
         # maybe return redirect
         if verified:
             # maybe redirect
-            return Response(success=True, data={}, status=status.HTTP_200_OK)
+            return Response(data={}, status=status.HTTP_200_OK)
         else:
             # maybe redirect to payment failed url or sth like that
             return ...
@@ -124,3 +116,24 @@ class ConnectIPSPaymentVerificationView(NavyaAuthLessView):
 def handle_grpc_write():
     # do something here like writing the payment status
     pass
+
+
+class PaymentFailureView(NavyaAuthLessView, RedirectView):
+    permanent = False
+    query_string = True
+    url = "https://navya_payment_fail_page"
+
+# We can redirect to this PaymentFailureView for all failed payments, but maybe we should update the payment request
+# Just considering this issue, I have made separate views.
+
+class EsewaPaymentFailureView(PaymentFailureView):
+    ...
+
+class KhaltiPaymentFailureView(PaymentFailureView):
+    ...
+
+class IMEPayPayFailureView(PaymentFailureView):
+    ...
+
+class ConnectIPSPayFailureView(PaymentFailureView):
+    ...

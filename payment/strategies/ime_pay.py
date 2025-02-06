@@ -1,53 +1,130 @@
-import base64
 import requests
-from core.config import PaymentConfig
+from utils.config import PaymentConfig
+from payment.models import ImePayDetails, PaymentRequest
 from payment.strategies.strategy import PaymentStrategy
-from utils import base_64_encoder
+from utils.utils import base_64_encoder, decode_imepay_message, prepare_imepay_header, prepare_imepay_initiate_payload, \
+    ime_pay_request_with_retry
 
 
 class IMEPayPayment(PaymentStrategy):
     def __init__(self, **kwargs):
         self.service = "imepay"
-        configs_class = PaymentConfig()
-        self.configs = configs_class.get_credentials(self.service)
+        config_class = PaymentConfig()
+        self.configs = config_class.get_credentials(self.service)
 
-    def initiate_payment(self, amount, **kwargs):
+
+    def initiate_payment(self, obj, **kwargs):
         token_url = self.configs.get("token_url")
         username = self.configs.get("merchant_username")
         password = self.configs.get("merchant_password")
         merchant_module = self.configs.get("merchant_module")
         merchant_code = self.configs.get("merchant_code")
-        transaction_id = kwargs.get("transaction_id")
         success_url = self.configs.get("success_url")
         failure_url = self.configs.get("failure_url")
         checkout_url = self.configs.get("checkout_url")
-        auth = f"{username}:{password}"
-        auth_encoded = base_64_encoder(auth)
-        module_encoded = base_64_encoder(merchant_module)
-
-        payload = {
-            "MerchantCode": merchant_code,
-            "Amount": amount,
-            "RefId": transaction_id,
-        }
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Basic {auth_encoded}",
-            "Module": module_encoded,
-        }
-        response = requests.request(
+        payload = prepare_imepay_initiate_payload(obj=obj, merchant_code=merchant_code)
+        headers = prepare_imepay_header(username=username, password=password, merchant_module=merchant_module)
+        # this function ime_pay_request_with_retry hits the end url 3 times consecutively, if it fails all attempts it
+        # returns the status code
+        response, status = ime_pay_request_with_retry(
             method="POST", url=token_url, data=payload, headers=headers
         )
-        if response.status_code == 200:
-            response_json = response.json()
-            if response_json["ResponseCode"] == 0:
-                token_id = response_json["TokenId"]
-                ref_id = response_json["RefId"]
-                amount = response_json["Amount"]
-                payload_composition = f"{token_id}|{merchant_code}|{ref_id}|{amount}|GET|{success_url}|{failure_url}"
-                payload_encoded = base_64_encoder(payload_composition)
-                return ...
+        print("IME PAY PAYMENT INITIATION FAILURE: ", status)
+        if not response:
+            return None
+        response_json = response.json()
+        if response_json["ResponseCode"] != 0:
+            # return some status code, like 421 for now
+            return None
+        token_id = response_json["TokenId"]
+        ref_id = response_json["RefId"]
+        amount = response_json["Amount"]
+        payload_composition = f"{token_id}|{merchant_code}|{ref_id}|{amount}|GET|{success_url}|{failure_url}"
+        payload_encoded = base_64_encoder(payload_composition)
+        # return this message as response to the frontend
+        payload = f"{checkout_url}?data={payload_encoded}"
+        # now write this to IME pay details
+        ImePayDetails.objects.create(
+            transaction_amount = amount,
+            token_id = token_id,
+            transaction_id = obj.transaction_id,
+            ime_transaction_status = 0
+        )
+        body = {
+            "payment_url": payload
+        }
+        return body
 
 
     def verify_payment(self, **kwargs):
-        pass
+        """
+        The merchant (IMEPay) in this case sends an encoded message to our success url.
+        Then the decoded message looks like this: Decoded data is:  3|Operation Cancelled By User|000|000|ChiyaPerCup_10.15|10.15|202004041931398392
+        Order of the string is:
+        a. [0]-> ResponseCode
+        b. [1]-> ResponseDescription
+        c. [2]-> Msisdn
+        d. [3]-> TransactionId
+        e. [4]-> RefId
+        f. [5]-> TranAmount
+        g. [6]-> TokenId
+        """
+        data = kwargs.get("data")
+        decoded_data = decode_imepay_message(data)
+        print("Decoded data is: ", decoded_data)
+        data_splits = decoded_data.split("|")
+        # decipher the message, if success then update the payment request table, imepay table, payment table, and
+        # finally make a grpc call to the Admin that updates the payment request and payment table on their side.
+        response_code = data_splits[0]
+        response_description = data_splits[1]
+        msisdn = data_splits[2]
+        transaction_id = data_splits[3]
+        ref_id = data_splits[4]
+        transaction_amount = data_splits[5]
+        token_id = data_splits[6]
+        if not response_code == 0:
+            return False, response_description
+        validation_url = self.configs.get("validation_url")
+        username = self.configs.get("merchant_username")
+        password = self.configs.get("merchant_password")
+        merchant_module = self.configs.get("merchant_module")
+        merchant_code = self.configs.get("merchant_code")
+        headers = prepare_imepay_header(username=username, password=password, merchant_module=merchant_module)
+        payload = {
+            "MerchantCode": merchant_code,
+            "RefId": ref_id,
+            "TokenId": token_id,
+            "TransactionId": transaction_id,
+            "Msisdn": msisdn,
+        }
+        response = requests.request(
+            method="POST", url=validation_url, data=payload, headers=headers
+        )
+        if response.status_code != 200:
+            return False, response.status_code
+        response_json = response.json()
+        imepay_status_code = response_json["ResponseCode"]
+        imepay_details = ImePayDetails.objects.filter(
+            transaction_id=transaction_id,
+            token_id=token_id,
+            transaction_amount=transaction_amount,
+        )
+        if not imepay_details or imepay_status_code!=0:
+            return False
+        imepay_detail = imepay_details.first()
+        # update the record
+        imepay_detail.ime_transaction_status = imepay_status_code
+        imepay_detail.save()
+        payment_request = PaymentRequest.objects.filter(transaction_id=transaction_id)
+        payment_request =  payment_request.first()
+        payment_request.update(status="Completed")
+        payment_request.save()
+        PaymentRequest.objects.create(
+            transaction_id=transaction_id,
+            amount=transaction_amount,
+            amount_in_paisa=transaction_amount*100,
+            user_id=payment_request.user_id
+        )
+        # grpc call
+        # return true or false
+        return True
