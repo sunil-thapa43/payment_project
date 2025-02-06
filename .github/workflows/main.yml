@@ -1,0 +1,30 @@
+# on push main, this ci is triggered
+
+name: CI WorkFlow
+
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          host: ${{secrets.SSH_IP}}
+          username: ${{secrets.SSH_USERNAME}}
+          key: ${{secrets.SSH_PRIVATE_KEY}}
+          script: |
+            cd /var/www/navya
+            git pull
+            echo "${{ secrets.ENV_FILE }}" > .env
+
+            docker compose down
+            docker compose up -d
