@@ -8,6 +8,7 @@ __pycache__/
 
 #PFX
 .pfx/
+*.pfx
 
 # Distribution / packaging
 .Python
