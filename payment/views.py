@@ -1,15 +1,31 @@
 from django.views.generic.base import RedirectView
 from rest_framework import status
 from rest_framework.response import Response
-
+from django.db import transaction
 from core.views import NavyaAuthLessView
-from payment.models import PaymentRequest
+from payment.grpc.grpc_client import grpc_update_payment
+from payment.models import PaymentRequest, Payment
 from payment.serializers import PaymentRequestSerializer
 from payment.strategies.connect_ips import ConnectIPSPayment
 from payment.strategies.esewa import EsewaPayment
 from payment.strategies.ime_pay import IMEPayPayment
 from payment.strategies.khalti import KhaltiPayment
 
+
+def handle_grpc_write(payment_request_obj:PaymentRequest)->None:
+    with transaction.atomic:
+        payment_request_obj.status = "Completed"
+        payment_request_obj.save()
+        # create an entry into Payment table
+        payment_obj, created =Payment.objects.create(
+            request=payment_request_obj,
+            transaction_id=payment_request_obj.transaction_id,
+            amount=payment_request_obj.amount,
+            amount_in_paisa=payment_request_obj.amount_in_paisa,
+            user_id=payment_request_obj.user_id,
+        )
+        # now handle grpc write
+        grpc_update_payment(payment_obj=payment_obj)
 
 class PaymentRequestView(NavyaAuthLessView):
     serializer_class = PaymentRequestSerializer
@@ -73,7 +89,11 @@ class KhaltiPaymentVerificationView(NavyaAuthLessView):
     def get(self, request):
         # similar flow, creating separate views for separate handling of requests
         # call the verify_payment method from paymentStrategy, verify the payment and do the grpc
-        pass
+        data = request.query_params.get("data")
+        strategy = KhaltiPayment()
+        payment_verified = strategy.verify_payment(message=data)
+        # maybe redirect
+        return Response(data={}, status=status.HTTP_200_OK)
 
 
 class IMEPayPaymentVerificationView(NavyaAuthLessView):
@@ -95,27 +115,25 @@ class IMEPayPaymentVerificationView(NavyaAuthLessView):
         if verified:
             # maybe redirect
             return Response(data={}, status=status.HTTP_200_OK)
-        else:
-            # maybe redirect to payment failed url or sth like that
-            return ...
+        # maybe redirect to payment failed url or sth like that
+        return ...
 
 
 
 class ConnectIPSPaymentVerificationView(NavyaAuthLessView):
     def get(self, request):
-        pass
-
-
-# we may need to provide both APIs for checking the payment request and the payment success db table when requested by
-# the staff users (need to discuss later). So we will be open to 2 db calls from other services, these services will be
-# added to allowed hosts (IMO)
-# PaymentRequestView -> get, auth= isStaffUser, isAdmin, isSuperUser, table = PaymentRequest
-# PaymentView -> get, auth= same as above, table = Payment
-
-
-def handle_grpc_write():
-    # do something here like writing the payment status
-    pass
+        """
+        FROM CIPS DOCS:
+        In each instance of redirection, connectIPS will append only TXNID parameter at the end of the URL;
+        referring to which, payment validation URL has to be called to validate payment from merchant’s end.
+        """
+        data = request.query_params.get("TXNID")
+        strategy = ConnectIPSPayment()
+        verified = strategy.verify_payment(txn_id=data)
+        # Redirection to be done
+        if verified:
+            return Response(data={}, status=status.HTTP_200_OK)
+        return Response(data={}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PaymentFailureView(NavyaAuthLessView, RedirectView):
@@ -136,4 +154,15 @@ class IMEPayPayFailureView(PaymentFailureView):
     ...
 
 class ConnectIPSPayFailureView(PaymentFailureView):
-    ...
+    # set status to failed
+    def get(self, request, *args, **kwargs):
+        txn_id = request.query_params.get("TXNID")
+        payment_request = PaymentRequest.objects.filter(transaction_id=txn_id)
+        if not payment_request:
+            # redirect
+            return Response(data={}, status=status.HTTP_400_BAD_REQUEST)
+        payment_request = payment_request.first()
+        payment_request.status = "Failed"
+        payment_request.save()
+        # redirect
+        return Response(data={}, status=status.HTTP_200_OK)

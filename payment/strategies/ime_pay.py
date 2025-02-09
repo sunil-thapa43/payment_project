@@ -1,9 +1,11 @@
 import requests
+
+from payment.views import handle_grpc_write
 from utils.config import PaymentConfig
 from payment.models import ImePayDetails, PaymentRequest
 from payment.strategies.strategy import PaymentStrategy
 from utils.utils import base_64_encoder, decode_imepay_message, prepare_imepay_header, prepare_imepay_initiate_payload, \
-    ime_pay_request_with_retry
+    payment_request_with_retry
 
 
 class IMEPayPayment(PaymentStrategy):
@@ -26,7 +28,7 @@ class IMEPayPayment(PaymentStrategy):
         headers = prepare_imepay_header(username=username, password=password, merchant_module=merchant_module)
         # this function ime_pay_request_with_retry hits the end url 3 times consecutively, if it fails all attempts it
         # returns the status code
-        response, status = ime_pay_request_with_retry(
+        response, status = payment_request_with_retry(
             method="POST", url=token_url, data=payload, headers=headers
         )
         print("IME PAY PAYMENT INITIATION FAILURE: ", status)
@@ -97,7 +99,7 @@ class IMEPayPayment(PaymentStrategy):
             "TransactionId": transaction_id,
             "Msisdn": msisdn,
         }
-        response = requests.request(
+        response, status = payment_request_with_retry(
             method="POST", url=validation_url, data=payload, headers=headers
         )
         if response.status_code != 200:
@@ -116,15 +118,8 @@ class IMEPayPayment(PaymentStrategy):
         imepay_detail.ime_transaction_status = imepay_status_code
         imepay_detail.save()
         payment_request = PaymentRequest.objects.filter(transaction_id=transaction_id)
+        if not payment_request:
+            return False
         payment_request =  payment_request.first()
-        payment_request.update(status="Completed")
-        payment_request.save()
-        PaymentRequest.objects.create(
-            transaction_id=transaction_id,
-            amount=transaction_amount,
-            amount_in_paisa=transaction_amount*100,
-            user_id=payment_request.user_id
-        )
-        # grpc call
-        # return true or false
+        handle_grpc_write(payment_request_obj=payment_request)
         return True

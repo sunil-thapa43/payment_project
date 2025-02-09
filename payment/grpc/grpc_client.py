@@ -20,19 +20,17 @@ class PaymentClient:
         return self.stub.Update(payment_request)
 
 
-
-client = PaymentClient(host='localhost', port=50051)
-try:
-    response = client.create_payment(
-        payment_pb2.PaymentRequest(
-            amount=100.22,
-            user_id=122534,
-            transaction_id="sjan37di7g377d732",
-            # other fields depend on the other service's database table
-            # request=1
+def grpc_update_payment(payment_obj):
+    client = PaymentClient(host='localhost', port=50051)
+    try:
+        response = client.create_payment(
+            payment_pb2.PaymentRequest(
+                amount=payment_obj.amount,
+                user_id=payment_obj.request.user_id,
+                transaction_id=payment_obj.transaction_id,
+            )
         )
-    )
-    print(response)
-except grpc.RpcError as e:
-    print("HIT EXCEPTION")
-    print(e)
+        print(response)
+    except grpc.RpcError as e:
+        print("HIT EXCEPTION")
+        print(e)

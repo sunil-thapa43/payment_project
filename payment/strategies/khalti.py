@@ -1,10 +1,11 @@
-from core.config import PaymentConfig
+from payment.views import handle_grpc_write
+from utils.config import PaymentConfig
 from payment.models import PaymentRequest
 from payment.strategies.strategy import PaymentStrategy
 import json
 import requests
 
-from utils import generate_transaction_id
+from utils.utils import generate_transaction_id, payment_request_with_retry
 
 
 class KhaltiPayment(PaymentStrategy):
@@ -13,7 +14,7 @@ class KhaltiPayment(PaymentStrategy):
         self.config = PaymentConfig()
         self.configs = self.config.get_credentials(self.service)
 
-    def initiate_payment(self, amount, **kwargs):
+    def initiate_payment(self, obj, **kwargs):
         """
         For Khalti payment, once the user chooses the Khalti payment option from all available options,
         the frontend requests for a khalti payment initiation.
@@ -34,40 +35,45 @@ class KhaltiPayment(PaymentStrategy):
         processes the payment of the end-user on their own end, hits our success or failure url respectively.
         """
         success_url = self.configs["success_url"]
-        failure_url = self.configs["failure_url"]
         initiate_url = self.configs["initiate_url"]
         secret_key = self.configs["secret_key"]
         wesite_url = kwargs.get("wesite_url")
-        transaction_id = generate_transaction_id()
 
         payload = json.dumps(
             {
                 "return_url": success_url,
                 "website_url": wesite_url,
                 # amount should be in paisa
-                "amount": amount,
-                "purchase_order_id": transaction_id,
-                "purchase_order_name": kwargs.get("purchase_order_name"),
-                "customer_info": {
-                    "name": kwargs.get("customer_name"),
-                    "email": kwargs.get("customer_email"),
-                    "phone": kwargs.get("customer_phone"),
-                },
+                "amount": obj.amount * 100,
+                "purchase_order_id": obj.transaction_id,
+                "purchase_order_name": obj.purpose,
+                # This module does not have access to the customer details, so if required this info is filled from the
+                # frontend at the time of making the request to the merchant
+
+                # "customer_info": {
+                #     "name": kwargs.get("customer_name"),
+                #     "email": kwargs.get("customer_email"),
+                #     "phone": kwargs.get("customer_phone"),
+                # },
+
             }
         )
         headers = {
             "Authorization": f"key {secret_key}",
             "Content-Type": "application/json",
         }
-
-        response = requests.request("POST", initiate_url, headers=headers, data=payload)
-        if response.status_code == 200:
-            body = response.json()
-            return body
-        else:
+        response, status = payment_request_with_retry(
+            "POST", initiate_url, headers=headers, data=payload
+        )
+        if response.status_code != 200:
             return None
+        # lets save the pidx as signature so that we can verify later.
+        obj.signature = response["pidx"]
+        obj.save()
+        body = response.json()
+        return body
 
-    def verify_payment(self, amount, **kwargs) -> bool:
+    def verify_payment(self, **kwargs) -> bool:
         secret_key = self.configs["secret_key"]
         body = json.dumps({"pidx": kwargs.get("pidx")})
         verify_url = self.configs["verify_url"]
@@ -82,11 +88,11 @@ class KhaltiPayment(PaymentStrategy):
             return False
         # cross check with payment request
         payment_request = PaymentRequest.objects.filter(
-            transaction_id=body["tranasaction_id"], amount=body["amount"]
+            transaction_id=body["tranasaction_id"], amount=body["amount"]/100
         )
         if not payment_request:
             # add some logs here, because it is already success on Khalti's end, but might be some infiltration as well
             # add logs
             return False
-        # maybe we should also return the payment request
+        handle_grpc_write(payment_request_obj=payment_request.first())
         return True

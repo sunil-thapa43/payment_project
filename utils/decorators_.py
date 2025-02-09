@@ -1,5 +1,4 @@
 import time
-import requests
 from functools import wraps
 
 

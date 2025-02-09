@@ -2,6 +2,7 @@ import base64
 import binascii
 import uuid, hmac, hashlib
 import requests
+from cryptography.hazmat.primitives.serialization import pkcs12
 
 from utils.decorators_ import retry_request
 
@@ -9,8 +10,11 @@ from utils.decorators_ import retry_request
 def generate_transaction_id() -> str:
     return str(uuid.uuid4().hex[:20])
 
+def base_64_encoder_to_bytes(data: str) -> bytes:
+    return base64.b64encode(data.encode())
+
 def base_64_encoder(message:str)->str:
-    return base64.b64encode(message.encode()).decode()
+    return base_64_encoder_to_bytes(message).decode()
 
 
 def encode_cips_message(cips_message: str) -> str: ...
@@ -39,15 +43,23 @@ def decode_esewa_message(message) -> str:
     return decoded_message.decode()
 
 
-def sign_connect_ips_message(cips_message: bytes, certificate_path) -> str:
+def sign_connect_ips_message(cips_message: str, certificate_path, certificate_password) -> bytes:
     with open(certificate_path, "rb") as cert_file:
         cert_data = cert_file.read()
 
+    # now load the pfx data
+    private_key, certificate_data, _ = pkcs12.load_key_and_certificates(
+        data=cert_data,
+        password=certificate_password,
+    )
+    print("Private key:", private_key)
+    print("Certificate data:", certificate_data)
+    message_encoded = base_64_encoder_to_bytes(cips_message)
 
-def get_encoded_token_cips(token: str, cert_path) -> str:
-    message = token.encode()
-    signed_message = sign_connect_ips_message(message, cert_path)
-    return signed_message
+    signature = private_key.sign(
+        data=message_encoded,
+    )
+    return signature
 
 
 def decode_imepay_message(message:str):
@@ -85,6 +97,9 @@ def prepare_imepay_initiate_payload(**kwargs):
 
 
 @retry_request(max_retries=3, initial_delay=2)
-def ime_pay_request_with_retry(method, url, data, headers):
+def payment_request_with_retry(method, url, data, headers=None, auth=None):
+    if auth:
+        response, status = requests.request(method, url, data=data, auth=auth)
+        return response, status
     response, status = requests.request(method, url, data=data, headers=headers)
     return response, status
