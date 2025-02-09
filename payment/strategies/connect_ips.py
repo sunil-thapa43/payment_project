@@ -48,6 +48,9 @@ class ConnectIPSPayment(PaymentStrategy):
             certificate_path=cert_path,
             certificate_password=password
         )
+        obj.signature = token
+        obj.payment_partner = "Connect IPS"
+        obj.save()
         body = {
             "MERCHANT_ID": merchant_id,
             "APPID": app_id,

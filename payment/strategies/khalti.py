@@ -69,6 +69,7 @@ class KhaltiPayment(PaymentStrategy):
             return None
         # lets save the pidx as signature so that we can verify later.
         obj.signature = response["pidx"]
+        obj.payment_partner = "Khalti"
         obj.save()
         body = response.json()
         return body

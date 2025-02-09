@@ -52,6 +52,9 @@ class IMEPayPayment(PaymentStrategy):
             transaction_id = obj.transaction_id,
             ime_transaction_status = 0
         )
+        obj.payment_partner = "IME Pay"
+        obj.signature = str(payload_encoded)
+        obj.save()
         body = {
             "payment_url": payload
         }
@@ -117,9 +120,9 @@ class IMEPayPayment(PaymentStrategy):
         # update the record
         imepay_detail.ime_transaction_status = imepay_status_code
         imepay_detail.save()
-        payment_request = PaymentRequest.objects.filter(transaction_id=transaction_id)
-        if not payment_request:
+        payment_requests = PaymentRequest.objects.filter(transaction_id=transaction_id)
+        if not payment_requests:
             return False
-        payment_request =  payment_request.first()
+        payment_request =  payment_requests.first()
         handle_grpc_write(payment_request_obj=payment_request)
         return True

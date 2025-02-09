@@ -63,7 +63,10 @@ class EsewaPayment(PaymentStrategy):
         signature = body["signature"]
         # cross check with payment request
         payment_request = PaymentRequest.objects.filter(
-            payment_partner="eSewa", transaction_id=transaction_id, amount=amount, signature=signature
+            payment_partner="eSewa",
+            transaction_id=transaction_id,
+            amount=amount,
+            signature=signature
         )
         if not payment_request:
             return False
